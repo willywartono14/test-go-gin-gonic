@@ -7,10 +7,11 @@ import (
 	"github.com/willywartono14/test-go-gin-gonic/model"
 )
 
-type CustomerConstroller interface {
+type CustomerController interface {
 	GetDataCustomers(ctx *gin.Context, token string, page, pageSize int, search string) ([]model.ResponseUser, error)
 	UpdateCustomer(ctx *gin.Context, token string, userRequest model.User) error
 	DeleteCustomer(ctx *gin.Context, token string, id int) error
+	GetDetailCustomer(ctx *gin.Context, token string, id int) ([]model.ResponseUserDetail, error)
 }
 
 var ErrNotAuthorized error = errors.New("not authorized")
@@ -23,6 +24,15 @@ func (c *controller) GetDataCustomers(ctx *gin.Context, token string, page, page
 	if err != nil {
 		return nil, ErrNotAuthorized
 	}
+
+	if page == 0 {
+		page = 1
+	}
+	if pageSize == 0 || pageSize > 20 {
+		pageSize = 10
+	}
+
+	page = (page - 1) * pageSize
 
 	users, err := model.User{}.FindCustomersWithPagination(ctx.Request.Context(), c.db, page, pageSize, search)
 	if err != nil {
@@ -100,12 +110,11 @@ func checkDataCustomer(user model.User, userRequest model.User) model.User {
 	return userRequest
 }
 
-func (c *controller) GetDetailCustomer(ctx *gin.Context, token string) ([]model.ResponseUserDetail, error) {
+func (c *controller) GetDetailCustomer(ctx *gin.Context, token string, id int) ([]model.ResponseUserDetail, error) {
 
 	var responseUserDetail []model.ResponseUserDetail
 
-	payload, err := c.verifyToken(token)
-	id := payload.UserId
+	_, err := c.verifyToken(token)
 	if err != nil {
 		return responseUserDetail, ErrNotAuthorized
 	}

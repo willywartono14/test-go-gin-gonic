@@ -186,12 +186,12 @@ func (u User) FindUserById(ctx context.Context, db *sql.DB, id int64) (User, err
 }
 
 func (u User) GetDetailCustomer(ctx context.Context, db *sql.DB, id int) ([]ResponseUserDetail, error) {
-	query := `SELECT u.username, u.fullname, u.email , u.phone , o.id, o.status, o.invoice_number 
+	query := `SELECT u.id,u.username, u.fullname, u.email , u.phone , o.id, o.status, o.invoice_number 
 	FROM users u
 	JOIN orders o
 	ON u.id = o.user_id
 	WHERE o.deleted_at IS NULL
-	AND u.id = 2`
+	AND u.id = $1`
 	var results []ResponseUserDetail
 
 	rows, err := db.QueryContext(ctx, query, id)
@@ -209,9 +209,13 @@ func (u User) GetDetailCustomer(ctx context.Context, db *sql.DB, id int) ([]Resp
 
 		err := rows.Scan(
 			&result.ID,
+			&result.Username,
 			&result.Fullname,
 			&result.Email,
 			&result.Phone,
+			&result.OrderID,
+			&result.Status,
+			&result.InvoiceNumber,
 		)
 		if err != nil {
 			return results, err

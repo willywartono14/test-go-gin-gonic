@@ -7,8 +7,9 @@ import (
 type (
 	Controller interface {
 		AuthController
-		CustomerConstroller
-		OrderConstroller
+		CustomerController
+		OrderController
+		ItemController
 	}
 	controller struct {
 		db *sql.DB

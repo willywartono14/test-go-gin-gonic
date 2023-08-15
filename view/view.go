@@ -46,29 +46,65 @@ type detailOrderRequest struct {
 	ItemQuantity int    `json:"item_quantity"`
 }
 
-type authView struct {
+type customerDetailResponse struct {
+	Username string                        `json:"username"`
+	Fullname string                        `json:"fullname"`
+	Email    string                        `json:"email"`
+	Phone    string                        `json:"phone"`
+	Orders   []customerOrderDetailResponse `json:"orders"`
+}
+
+type customerOrderDetailResponse struct {
+	OrderID       int    `json:"order_id"`
+	Status        string `json:"status"`
+	InvoiceNumber string `json:"invoice_number"`
+}
+
+type orderDetailResponse struct {
+	OrderID       int                              `json:"order_id"`
+	Status        string                           `json:"status"`
+	InvoiceNumber string                           `json:"invoice_number"`
+	Transaction   []orderTransactionDetailResponse `json:"transaction"`
+}
+
+type orderTransactionDetailResponse struct {
+	ItemName     string `json:"item_name"`
+	ItemPrice    int64  `json:"item_price"`
+	ItemQuantity int    `json:"item_quantity"`
+}
+
+type view struct {
 	controller controller.Controller
 }
 
-func NewAuthView(controller controller.Controller, router *gin.Engine) {
-	authView := authView{
+func NewView(controller controller.Controller, router *gin.Engine) {
+	view := view{
 		controller: controller,
 	}
 
-	router.POST("/login", authView.login)
-	router.POST("/register", authView.register)
-	router.GET("/customers", authView.getDataCustomers)
-	router.PUT("/customers", authView.updateCustomer)
-	router.DELETE("/customers/:id", authView.deleteCustomer)
+	//Auth
+	router.POST("/login", view.login)
+	router.POST("/register", view.register)
 
-	router.GET("/orders", authView.getDataOrders)
-	router.PUT("/orders", authView.updateOrder)
-	router.DELETE("/orders/:id", authView.deleteOrder)
-	router.POST("/orders", authView.insertOrder)
+	//Customer Management
+	router.GET("/customers", view.getDataCustomers)
+	router.PUT("/customers", view.updateCustomer)
+	router.DELETE("/customers/:id", view.deleteCustomer)
+	router.GET("/customers/:id", view.getDataDetailCustomer)
+
+	//Order Management
+	router.GET("/orders", view.getDataOrders)
+	router.PUT("/orders", view.updateOrder)
+	router.DELETE("/orders/:id", view.deleteOrder)
+	router.POST("/orders", view.insertOrder)
+	router.GET("/orders/:id", view.getDataDetailOrder)
+
+	//Items
+	router.GET("/items", view.getAllItem)
 
 }
 
-func (a *authView) login(context *gin.Context) {
+func (a *view) login(context *gin.Context) {
 
 	var loginRequest LoginRequest
 
@@ -89,7 +125,7 @@ func (a *authView) login(context *gin.Context) {
 	})
 }
 
-func (a *authView) register(context *gin.Context) {
+func (a *view) register(context *gin.Context) {
 
 	var registerRequest registerRequest
 
@@ -118,7 +154,7 @@ func (a *authView) register(context *gin.Context) {
 	})
 }
 
-func (a *authView) getDataCustomers(context *gin.Context) {
+func (a *view) getDataCustomers(context *gin.Context) {
 
 	page, _ := context.GetQuery("page")
 	page_size, _ := context.GetQuery("page_size")
@@ -153,7 +189,7 @@ func (a *authView) getDataCustomers(context *gin.Context) {
 	})
 }
 
-func (a *authView) deleteCustomer(context *gin.Context) {
+func (a *view) deleteCustomer(context *gin.Context) {
 
 	id := context.Param("id")
 
@@ -175,11 +211,11 @@ func (a *authView) deleteCustomer(context *gin.Context) {
 		return
 	}
 	context.JSON(http.StatusOK, gin.H{
-		"status": "deleted",
+		"status": "data has been successfully deleted",
 	})
 }
 
-func (a *authView) updateCustomer(context *gin.Context) {
+func (a *view) updateCustomer(context *gin.Context) {
 
 	var customer customerRequest
 
@@ -203,11 +239,56 @@ func (a *authView) updateCustomer(context *gin.Context) {
 	}
 
 	context.JSON(http.StatusOK, gin.H{
-		"status": "success",
+		"status": "data has been successfully updated",
 	})
 }
 
-func (a *authView) getDataOrders(context *gin.Context) {
+func (a *view) getDataDetailCustomer(context *gin.Context) {
+
+	id := context.Param("id")
+	token := context.Request.Header["Authorization"]
+
+	var response customerDetailResponse
+
+	idI, err := strconv.Atoi(id)
+	if err != nil {
+		context.JSON(http.StatusBadRequest, gin.H{
+			"message": "failed to fetch data",
+			"err":     err,
+		})
+		return
+	}
+
+	customer, err := a.controller.GetDetailCustomer(context, token[0], idI)
+	if err != nil {
+		context.JSON(http.StatusBadRequest, gin.H{
+			"message": "failed to fetch data",
+			"err":     err,
+		})
+		return
+	}
+
+	if len(customer) > 0 {
+		response.Username = customer[0].Username
+		response.Fullname = customer[0].Fullname
+		response.Email = customer[0].Email
+		response.Phone = customer[0].Phone
+		for x := range customer {
+			var order customerOrderDetailResponse
+			order.OrderID = customer[x].OrderID
+			order.Status = customer[x].Status
+			order.InvoiceNumber = customer[x].InvoiceNumber
+
+			response.Orders = append(response.Orders, order)
+		}
+	}
+
+	context.JSON(http.StatusOK, gin.H{
+		"data": response,
+	})
+}
+
+func (a *view) getDataOrders(context *gin.Context) {
 
 	page, _ := context.GetQuery("page")
 	page_size, _ := context.GetQuery("page_size")
@@ -219,6 +300,7 @@ func (a *authView) getDataOrders(context *gin.Context) {
 	if err != nil {
 		context.JSON(http.StatusBadRequest, gin.H{
 			"message": "failed to fetch data",
+			"err":     err,
 		})
 		return
 	}
@@ -226,6 +308,7 @@ func (a *authView) getDataOrders(context *gin.Context) {
 	if err != nil {
 		context.JSON(http.StatusBadRequest, gin.H{
 			"message": "failed to fetch data",
+			"err":     err,
 		})
 		return
 	}
@@ -234,6 +317,7 @@ func (a *authView) getDataOrders(context *gin.Context) {
 	if err != nil {
 		context.JSON(http.StatusBadRequest, gin.H{
 			"message": "failed to fetch data",
+			"err":     err,
 		})
 		return
 	}
@@ -242,7 +326,7 @@ func (a *authView) getDataOrders(context *gin.Context) {
 	})
 }
 
-func (a *authView) deleteOrder(context *gin.Context) {
+func (a *view) deleteOrder(context *gin.Context) {
 
 	id := context.Param("id")
 
@@ -250,6 +334,7 @@ func (a *authView) deleteOrder(context *gin.Context) {
 	if err != nil {
 		context.JSON(http.StatusBadRequest, gin.H{
 			"message": "failed to fetch data",
+			"err":     err,
 		})
 		return
 	}
@@ -260,15 +345,16 @@ func (a *authView) deleteOrder(context *gin.Context) {
 	if err != nil {
 		context.JSON(http.StatusBadRequest, gin.H{
 			"message": "failed to fetch data",
+			"err":     err,
 		})
 		return
 	}
 	context.JSON(http.StatusOK, gin.H{
-		"status": "deleted",
+		"status": "data has been successfully deleted",
 	})
 }
 
-func (a *authView) updateOrder(context *gin.Context) {
+func (a *view) updateOrder(context *gin.Context) {
 
 	var order orderRequest
 
@@ -291,11 +377,11 @@ func (a *authView) updateOrder(context *gin.Context) {
 	}
 
 	context.JSON(http.StatusOK, gin.H{
-		"status": "success",
+		"status": "data has been successfully updated",
 	})
 }
 
-func (a *authView) insertOrder(context *gin.Context) {
+func (a *view) insertOrder(context *gin.Context) {
 
 	var order OrderRequestTransaction
 	var items []model.RequestDetailOrder
@@ -332,6 +418,67 @@ func (a *authView) insertOrder(context *gin.Context) {
 	}
 
 	context.JSON(http.StatusOK, gin.H{
-		"status": "success",
+		"status": "data has been successfully inserted",
+	})
+}
+
+func (a *view) getDataDetailOrder(context *gin.Context) {
+
+	id := context.Param("id")
+	token := context.Request.Header["Authorization"]
+
+	var response orderDetailResponse
+
+	idI, err := strconv.Atoi(id)
+	if err != nil {
+		context.JSON(http.StatusBadRequest, gin.H{
+			"message": "failed to fetch data",
+			"error":   err,
+		})
+		return
+	}
+
+	order, err := a.controller.GetDetailOrder(context, token[0], idI)
+	if err != nil {
+		context.JSON(http.StatusBadRequest, gin.H{
+			"message": "failed to fetch data",
+			"error":   err,
+		})
+		return
+	}
+
+	if len(order) > 0 {
+		response.OrderID = order[0].ID
+		response.Status = order[0].Status
+		response.InvoiceNumber = order[0].InvoiceNumber
+		for x := range order {
+			var transaction orderTransactionDetailResponse
+			transaction.ItemName = order[x].ItemName
+			transaction.ItemPrice = order[x].ItemPrice
+			transaction.ItemQuantity = order[x].ItemQuantity
+
+			response.Transaction = append(response.Transaction, transaction)
+		}
+	}
+
+	context.JSON(http.StatusOK, gin.H{
+		"data": response,
+	})
+}
+
+func (a *view) getAllItem(context *gin.Context) {
+
+	token := context.Request.Header["Authorization"]
+
+	items, err := a.controller.GetAllItem(context, token[0])
+	if err != nil {
+		context.JSON(http.StatusBadRequest, gin.H{
+			"message": "failed to fetch data",
+			"err":     err,
+		})
+		return
+	}
+	context.JSON(http.StatusOK, gin.H{
+		"data": items,
 	})
 }

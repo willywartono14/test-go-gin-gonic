@@ -41,7 +41,24 @@ type ResponseUserDetail struct {
 	Fullname      string `json:"fullname"`
 	Email         string `json:"email"`
 	Phone         string `json:"phone"`
-	OrderID       string `json:"order_id"`
+	OrderID       int    `json:"order_id"`
 	Status        string `json:"status"`
 	InvoiceNumber string `json:"invoice_number"`
+}
+
+type ResponseOrderDetail struct {
+	ID            int    `json:"id"`
+	UserID        int    `json:"user_id"`
+	Status        string `json:"status"`
+	InvoiceNumber string `json:"invoice_number"`
+	ItemName      string `json:"item_name"`
+	ItemPrice     int64  `json:"item_price"`
+	ItemQuantity  int    `json:"item_quantity"`
+}
+
+type ResponseItem struct {
+	ID        int    `json:"id"`
+	ItemName  string `json:"item_name"`
+	ItemPrice int64  `json:"item_price"`
+	ItemStock int    `json:"item_stock"`
 }

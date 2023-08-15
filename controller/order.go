@@ -5,11 +5,12 @@ import (
 	"github.com/willywartono14/test-go-gin-gonic/model"
 )
 
-type OrderConstroller interface {
+type OrderController interface {
 	GetDataOrders(ctx *gin.Context, token string, page, pageSize int, search string) ([]model.ResponseOrder, error)
 	UpdateOrder(ctx *gin.Context, token string, orderRequest model.Order) error
 	DeleteOrder(ctx *gin.Context, token string, id int) error
 	InsertOrder(ctx *gin.Context, token string, orderRequest model.RequestOrder) error
+	GetDetailOrder(ctx *gin.Context, token string, id int) ([]model.ResponseOrderDetail, error)
 }
 
 func (c *controller) GetDataOrders(ctx *gin.Context, token string, page, pageSize int, search string) ([]model.ResponseOrder, error) {
@@ -20,6 +21,15 @@ func (c *controller) GetDataOrders(ctx *gin.Context, token string, page, pageSiz
 	if err != nil {
 		return nil, ErrNotAuthorized
 	}
+
+	if page == 0 {
+		page = 1
+	}
+	if pageSize == 0 || pageSize > 20 {
+		pageSize = 10
+	}
+
+	page = (page - 1) * pageSize
 
 	orders, err := model.Order{}.FindOrdersWithPagination(ctx.Request.Context(), c.db, page, pageSize, search)
 	if err != nil {
@@ -121,4 +131,21 @@ func (c *controller) InsertOrder(ctx *gin.Context, token string, orderRequest mo
 	}
 
 	return nil
+}
+
+func (c *controller) GetDetailOrder(ctx *gin.Context, token string, id int) ([]model.ResponseOrderDetail, error) {
+
+	var responseOrderDetail []model.ResponseOrderDetail
+
+	_, err := c.verifyToken(token)
+	if err != nil {
+		return responseOrderDetail, ErrNotAuthorized
+	}
+
+	responseOrderDetail, err = model.Order{}.GetDetailOrder(ctx.Request.Context(), c.db, int(id))
+	if err != nil {
+		return nil, err
+	}
+
+	return responseOrderDetail, nil
 }

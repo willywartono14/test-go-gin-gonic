@@ -148,3 +148,44 @@ func (o Order) InsertOrder(ctx context.Context, db *sql.DB, order Order) (int, e
 
 	return order.ID, nil
 }
+
+func (o Order) GetDetailOrder(ctx context.Context, db *sql.DB, id int) ([]ResponseOrderDetail, error) {
+	query := `SELECT o.id, o.user_id, o.status, o.invoice_number, t.item_name, t.item_price, t.item_quantity  
+	FROM orders o 
+	join transactions t 
+	on o.id = t.order_id 
+	where o.deleted_at is null
+	and o.id = $1`
+	var results []ResponseOrderDetail
+
+	rows, err := db.QueryContext(ctx, query, id)
+
+	defer func() {
+		err = rows.Close()
+	}()
+
+	if err != nil {
+		return results, err
+	}
+
+	for rows.Next() {
+		var result ResponseOrderDetail
+
+		err := rows.Scan(
+			&result.ID,
+			&result.UserID,
+			&result.Status,
+			&result.InvoiceNumber,
+			&result.ItemName,
+			&result.ItemPrice,
+			&result.ItemQuantity,
+		)
+		if err != nil {
+			return results, err
+		}
+
+		results = append(results, result)
+	}
+
+	return results, nil
+}

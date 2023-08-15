@@ -22,7 +22,7 @@ func main() {
 
 	c := controller.NewController(db)
 
-	view.NewAuthView(c, router)
+	view.NewView(c, router)
 
 	router.Run(":8080")
 }
